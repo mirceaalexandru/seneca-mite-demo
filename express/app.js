@@ -1,10 +1,12 @@
 "use strict";
 
+var https = require( 'https' )
 var http = require( 'http' )
 var express = require( 'express' )
 var bodyParser = require( 'body-parser' )
 var cookieParser = require( 'cookie-parser' )
 var session = require( 'express-session' )
+var fs = require('fs')
 
 // create a seneca instance
 var seneca = require( 'seneca' )( {log: console} )
@@ -72,6 +74,9 @@ seneca
     }
     return response( null, {err: false} )
   } )
+  .add( {role: 'test', cmd: 'ping'}, function (msg, response) {
+    response(null, {response: 'pong'})
+  } )
 
 
 seneca.act( {role: 'web', use: {
@@ -85,10 +90,28 @@ seneca.act( {role: 'web', use: {
   }
 }} )
 
+seneca.act( {role: 'web', use: {
+  name: 'test',
+  prefix: '/pbl/',
+  pin: {role: 'test', cmd: '*'},
+  map: {
+    ping: {GET: true, alias: 'ping'}
+  }
+}} )
+
 
 loadModules()
 
 function loadModules() {
+  var hskey = fs.readFileSync("certs/sentinel-key.pem");
+  var hscert = fs.readFileSync("certs/sentinel-cert.pem")
+
+  https.createServer({
+    key: hskey,
+    cert: hscert
+  }, app)
+    .listen(3333)
+
   var server = http.createServer( app )
-  server.listen( 3333 )
+  server.listen( 5555 )
 }
